@@ -106,3 +106,6 @@ system installed and running.
   way). Now your phone is an old-gold modem connected to Internet. At
   least it works for Android
 - You have configured Internet access somehow
+
+*HINT: If you connected with Android or cabel just type `dhclient` to
+setup network. It requires only before you get your network manager.*

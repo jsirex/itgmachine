@@ -90,7 +90,9 @@ ensure_apt_update() {
 ensure_apt_package() {
     ensure_apt_update
 
-    apt install -y "$1"
+    apt install "$@"
+    apt_status=$?
+    [[ $apt_status -eq 0 ]] || (echo "Exist status $apt_status. Press enter to continue"; read dummy)
 }
 
 ensure_command() {
@@ -118,30 +120,15 @@ install_itgmania() {
     ensure_command curl
 
     if [[ ! -f "$ITGMACHINE_CACHE/$archive" ]]; then
-
 	if ! curl -fL --progress-bar -o "$ITGMACHINE_CACHE/$archive" "$url"; then
-	    whiptail --title "ITG Mania Download" \
-		     --ok-button "Back" \
-		     --msgbox "Failed to download version: $version from\n$url" 10 80
+	    msgbox "Failed to download version: $version from\n$url"
 	    return
 	fi
-
     fi
 
     mkdir -p "/usr/local/games/$name"
     tar -C "/usr/local/games/$name" -xf "$ITGMACHINE_CACHE/$archive" "$name/itgmania" --strip-components 2
     ln -sfn "/usr/local/games/$name" /usr/local/games/itgmania
-}
-
-screen_install_itgmania() {
-    local version="0.9.0"
-
-    inputbox "Enter ITGMania version" "$version"
-    if [[ $wt_status -ne 0 ]]; then return; fi
-    version="$wt_out"
-
-    install_itgmania "$version"
-
 }
 
 screen_apt_repository() {
@@ -197,6 +184,14 @@ screen_itgmania_install() {
     fi
 
     install_itgmania "$version"
+
+    ensure_apt_package
+    ensure_apt_package libusb-0.1-4 libgl1 libglvnd0 libglu1-mesa libxtst6 libxinerama1 libgdk-pixbuf-2.0-0 libgtk-3-0t64
+
+    # yesnobox "Install libusb library for lights driver support?"
+    # if [[ $wt_status -eq 0 ]]; then
+    #	ensure_apt_package libusb-0.1-4
+    # fi
 }
 
 screen_mount_songs() {
@@ -265,27 +260,88 @@ screen_uefi_kernel() {
 	       -u 'root=PARTLABEL=root itgmachine.mode=backup rw quiet nmi_watchdog=0 initrd=\EFI\itgmachine\initrd.img'
 }
 
+screen_wifi() {
+    screen_title="ITG Machine - WIFI"
+    ensure_command nmcli network-manager
+
+    local menuitems=()
+    local wifi_networks
+
+    wifi_networks=$(nmcli -g SSID,RATE,BARS device wifi list)
+
+    while IFS=: read -r ssid rate bars; do
+        menuitems+=("screen_wifi_connect $ssid")
+        menuitems+=("$ssid ($rate $bars)")
+    done <<< "$wifi_networks"
+
+    menubox "${menuitems[@]}"
+}
+
+screen_wifi_connect() {
+    local ssid="$1"
+    ensure_command nmcli network-manager
+
+    passbox "Enter password for $ssid"
+    [[ $wt_status -eq 0 ]] || return
+
+    nmcli device wifi connect "$ssid" password "$wt_out"
+    nmcli_status=$?
+    [[ $nmcli_status -eq 0 ]] || (echo "Exist status $nmcli_status. Press enter to continue"; read dummy)
+}
+
+screen_sound_pipewire() {
+    ensure_apt_package pipewire pipewire-audio wireplumber
+
+    # wpctl get|set-volume ID 0.8
+}
+
+screen_sddm() {
+    ensure_apt_package --no-install-recommends \
+		       --no-install-suggests \
+		       sddm
+
+    mkdir -p /etc/sddm.conf.d
+    cat << EOF > /etc/sddm.conf.d/autologin.conf
+[Autologin]
+User=itg
+Session=itgmania
+Relogin=true
+EOF
+
+    mkdir -p /usr/local/share/xsessions
+    cat << EOF > /usr/local/share/xsessions/itgmania.desktop
+[Desktop Entry]
+Type=XSession
+Exec=/usr/local/games/itgmania/itgmania
+# TryExec=/usr/local/games/itgmania/itgmania
+DesktopNames=ITGMania
+Name=ITGMania (X11)
+EOF
+
+}
+
 screen_system() {
     screen_title="ITG Machine - System"
     menubox screen_apt_repository "Configure Debian Testing repository" \
             screen_apt_upgrade "Perform Debian Upgrade" \
 	    screen_uefi_kernel "Install kernel to UEFI partition" \
             screen_install_networkmanager "Install Network Manager" \
-            screen_sound_alsa "Setup Alsa (not ready)" \
-            screen_sound_pipewire "Setup Pipewire"
+            screen_wifi "Configure WiFi Network" \
+            screen_sound_pipewire "Setup Pipewire" \
+	    screen_sddm "Configure SDDM to run ITGMania"
 
 }
 
 screen_itgmania() {
     screen_title="ITG Machine - ITG Mania"
-    menubox "screen_install_itgmania 0.9.0" "Install ITGmania 0.9.0" \
+    menubox "screen_itgmania_install 0.9.0" "Install ITGmania 0.9.0" \
 	    "screen_itgmania_install 0.8.0" "Install ITGmania 0.8.0" \
 	    "screen_itgmania_install" "Install ITGmania other version"
 }
 
 screen_main() {
     screen_title="ITG Machine"
-    ensure_root
+    [[ $ITGDEBUG == "yes" ]] || ensure_root
 
     menubox screen_system "Manage System" \
 	    screen_disk "Configure disk" \
