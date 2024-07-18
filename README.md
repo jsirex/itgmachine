@@ -45,8 +45,8 @@ and proceed without network configuration. We will deal with it later.
 
 ## Setup user
 
-Installer creates default user and it will be used for running **ITG
-Machine**.  By default `itg` user will be used.
+Installer creates default user and it will be used for running **ITG Machine**.
+By default `itg` user will be used.
 
 ## UEFI
 
@@ -56,39 +56,19 @@ kernel to UEFI partition`.
 
 ## Disk
 
-To make backups work an additional partition same size as root should
-be created.  This partition will be used as raw backup. **ITG
-Machine** can be later backed up via boot menu option by copying root
-partition. Backup partition can be smaller then root partition, but it
-still must be larger than total used space. Better keep size same.
-Under rescue circumstances it will be possible to restore data back
-from backup partition or even boot directly from backup.
+*NOTE: My first intention was to create machine with hidden partition for backup/restore purpose.*
+*Despite the fact I implement this complicated logic, after pondering about it, I decided to drop this.*
+*If you think you need backup/restore just do it in your way and I keep installer simpler.*
 
-`Songs` folder takes most of the space but less important from system
-point of view, so we can keep it on separate partition and exclude
-from backups.
+There is not strict disk layout required. Do it like you want. Here is some recommendation:
 
-The following layout is recommended:
+- Force UEFI Installation: **YES**, if possible
+- Make sure you have EFI boot partition
+- Preferred partition table type is **GPT**.
+- If you plan to backup/restore OS, put `/home` on separate partition makes it easy to backup only OS by backing up only `/`
+- If you have separate `/home` you should backup files separately. If you wish. Or just machine profile. Maybe be in next versions
+- For running **ITGMania** with enough RAM swap is not required
 
-- Force UEFI Installation: **YES**
-- Partition method: manual. Create new partition table. GPT is preferred.
-- #1 UEFI: 200 MB, Boot flag on
-- #2 Root: 35 GB, Ext4, /, SET PARTLABEL=root
-  - You can make root partition less or more depending on your drive capacity
-  - OS and **ITGMania** takes less than 1 GB
-  - Log files, **ITGMania** save files can take some space
-  - Additional packages, drivers can take some space too
-  - For experiments, installing SDK, building **ITGMania** from scratch more space is needed
-  - 20-35 GB is enough for experiments, install additional games
-- #3 Backup: 35 GB, do nothing, SET PARTLABEL=backup
-  - Same size as Root partition
-  - Can be smaller until total used space by `root` fits into partition
-  - However, not recommended to make it smaller
-- #4 Songs: 100 GB+, Ext4, do not mount partition, SET PARTLABEL=songs
-  - It depends on your songs' collection
-- Any other partitions you need
-
-For running **ITGMania** with enough RAM swap is not required.
 
 For example at the end it should like this (I used VirtualBox, but
 your partitions should have different size).
@@ -102,8 +82,7 @@ Reboot to your fresh installed system, install required firmware, etc.
 
 # ITG Machine Installer
 
-At this point it is expected that you have a minimal Debian
-system installed and running.
+At this point it is expected that you have a minimal Debian system installed and running.
 
 **Internet access** must be provided. Your options:
 - Plug network cable (easiest way). Temporary. Until you install

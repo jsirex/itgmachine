@@ -692,8 +692,10 @@ screen_network_dhclient() {
     screen_title="ITG Machine - DHCLIENT"
 
     msgbox "You current network configuration is displayed below.
-If you pluged in any wired connection try dhclient to set it up.
+If you pluged in any wired connection this will try dhclient to set it up.
 If you already have Internet connection, say no.
+
+If you did it already as said in the README, also say no.
 
     $(ip addr)"
 
