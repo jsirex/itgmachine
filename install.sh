@@ -21,6 +21,8 @@ screen_title="ITG Machine"
 itgmachine_apt_updated="false"
 itgmachine_efi_dir="/boot/efi/EFI/itgmachine"
 
+itgmachine_user=itg
+
 ### Whiptail interface
 # Each function unsets or returns wt_out
 msgbox() {
@@ -182,6 +184,12 @@ screen_reboot() {
     yesnobox "Reboot ITG Machine?" && run reboot
 }
 
+screen_directory_create() {
+    if [[ $# -eq 0 ]]; then return 1; fi
+
+    [[ -d "$1" ]] || run mkdir -p "$1" || { msgbox "Can't create dir: $1"; return 1; }
+}
+
 screen_apt_update() {
     if [[ $# -gt 0 ]]; then itgmachine_apt_updated="false"; fi
     if [[ "$itgmachine_apt_updated" == "true" ]]; then return 0; fi
@@ -295,9 +303,7 @@ screen_uefi_dir() {
 	return 1
     fi
 
-    if [[ -d "$itgmachine_efi_dir" ]]; then return 0; fi
-
-    mkdir "$itgmachine_efi_dir" || { msgbox "Unable to create $itgmachine_efi_dir"; return 1; }
+    screen_directory_create "$itgmachine_efi_dir"
 }
 
 screen_kernel_uefi_hook() {
@@ -324,7 +330,8 @@ screen_initramfs_uefi_hook() {
 
     if [[ -x "$hook" && -f "$itgmachine_efi_dir/initrd.img" ]]; then return 0; fi
 
-    mkdir -p "$(dirname "$hook")" || { msgbox "Unable to create directory for $hook"; return 1; }
+    screen_directory_create "$(dirname "$hook")" || return 1
+
     cat << EOF > "$hook" || { msgbox "Unable to create initramfs hook: $hook"; return 1; }
 #!/bin/sh
 cp -v /initrd.img $itgmachine_efi_dir
@@ -401,6 +408,11 @@ screen_vsftpd() {
 	&& run systemctl restart vsftpd
 }
 
+screen_sound_pipewire() {
+    screen_apt_package pipewire pipewire-audio wireplumber
+}
+
+
 screen_itgmania_dependencies() {
     screen_apt_package libusb-0.1-4 libgl1 libglvnd0 libglu1-mesa libxtst6 \
 		       libxinerama1 libgdk-pixbuf-2.0-0 libgtk-3-0t64
@@ -415,7 +427,7 @@ screen_itgmania_download() {
 
     while read -r archive_url; do
 	menuitems+=("$archive_url" "$(basename "$archive_url")")
-    done < <(wget -qO- $ghapi | grep -o "$releases")
+    done < <(wget -qO- "$ghapi" | grep -o "$releases")
 
     menubox "Select ITGmania version from the list below:" "${menuitems[@]}" || return 1
     archive_url="$wt_out"
@@ -423,134 +435,103 @@ screen_itgmania_download() {
     archive_file="$cache/$archive_name"
     archive_dir="/usr/local/games/$(basename "$archive_name" .tar.gz)"
 
-    [[ -d "$cache" ]] || run mkdir -p "$cache" || { msgbox "Can't create cache dir: $cache"; return 1; }
+    screen_directory_create "$cache" || return 1
 
     [[ -f "$archive_file" ]] || run wget -q --tries 3 --show-progress -O "$archive_file" "$archive_url" \
 	|| { msgbox "Failed to download $archive_name from url:\n$url"; return 1; }
 
-    [[ -d "$archive_dir" ]] || run mkdir -p "$archive_dir" \
-	|| { msgbox "Can't create ITGmania dir: $archive_dir"; return 1; }
+    screen_directory_create "$archive_dir" || return 1
 
     [[ -x "$archive_dir/itgmania" ]] || run tar -C "$archive_dir" -xf "$archive_file" --strip-components 2 \
 	|| { msgbox "Can't unpack ITGmania from archive: $archive_file"; return 1; }
 
-    ln -sfn "$archive_dir" /usr/local/games/itgmania
+    run ln -sfn "$archive_dir" /usr/local/games/itgmania || { msgbox "Can't update symlink"; return 1; }
+
+    msgbox "ITGmania has been cached and installed.
+Also symlink /usr/local/games/itgmania has been updated.
+Name: $archive_name
+DIR: $archive_dir"
 }
 
+screen_itgmania_sddm() {
+    screen_apt_package --no-install-recommends --no-install-suggests sddm || return 1
 
-# For usb profiles required
-screen_fstab_validate() {
-    local out
-
-    if ! out=$(findmnt --verify); then
-	msgbox "/etc/fstab validation failed:\n$out"
-	return 1
-    fi
-}
-
-screen_fstab() {
-    screen_title="ITG Machine - FSTab"
-
-    local updates
-    local fstabroot
-    local fstabsongs
-
-    #screen_partition_validate "$root_partition" || return 1
-    #screen_partition_validate "$songs_partition" || return 1
-
-    if [[ "$root_partition" != "SKIP" ]]; then
-	if fstabroot=$(findmnt -n --fstab -o SOURCE --target /); then
-	    updates="$updates s|$fstabroot|$root_partition|;"
-	else
-	    msgbox "Installer couldn't detect root in fstab. Running validation.."
-	    screen_fstab_validate
-	fi
-    fi
-
-    if [[ "$songs_partition" != "SKIP" ]]; then
-	if fstabsongs=$(findmnt -n --fstab -o SOURCE --target /home/itg/.itgmania/Songs); then
-	    updates="$updates s|$fstabsongs|$songs_partition|;"
-	else
-	    echo "$songs_partition	/home/itg/.itgmania/Songs	ext4	discard,noatime,nodiratime,errors=remount-ro	0	0" >> /etc/fstab
-	    screen_fstab_validate
-	fi
-    fi
-
-    sed -i.bak "$updates" /etc/fstab
-}
-
-fstab_flash() {
-    # todo: songs nofail, usb nofail
-    cat << EOF > /tmp/fstab
-/dev/disk/by-path/pci-0000:00:13.2-usb-0:6:1.0-scsi-0:0:0:0-part1       /mnt/P1 auto    rw,noatime,noauto,user  0       0
-/dev/disk/by-path/pci-0000:00:13.2-usb-0:6:1.0-scsi-0:0:0:0             /mnt/P1 auto    rw,noatime,noauto,user  0       0
-
-/dev/disk/by-path/pci-0000:00:13.2-usb-0:5:1.0-scsi-0:0:0:0-part1       /mnt/P2 auto    rw,noatime,noauto,user  0       0
-/dev/disk/by-path/pci-0000:00:13.2-usb-0:5:1.0-scsi-0:0:0:0             /mnt/P2 auto    rw,noatime,noauto,user  0       0
-EOF
-
-}
-
-
-
-screen_mount_songs() {
-    local user=itg
-    local itgmania=/home/itg/.itgmania
-    local songs=$itgmania/Songs
-
-    [[ -d "$itgmania" ]] || mkdir "$itgmania"
-    chown itg:itg $itgmania
-    chown itg:itg $itgmania/Songs
-
-    if ! mountpoint -q /home/itg/.itgmania/Songs; then
-	mount -o discard,noatime,nodiratime,errors=remount-ro PARTLABEL=songs /home/itg/.itgmania/Songs
-    fi
-
-    grep /home/itg/.itgmania/Songs /etc/fstab ||
-	echo "PARTLABEL=songs	/home/itg/.itgmania/Songs	ext4	discard,noatime,nodiratime,errors=remount-ro	0	0" >> /etc/fstab
-
-    # This changes permissions inside mounted partition
-    chown itg:itg /home/itg/.itgmania/Songs/.
-}
-
-
-
-
-screen_sound_pipewire() {
-    screen_apt_package pipewire pipewire-audio wireplumber
-}
-
-screen_sddm() {
-    screen_apt_package --no-install-recommends \
-		       --no-install-suggests \
-		       sddm
-    # wpctl get|set-volume ID 0.8
-
-    mkdir -p /etc/sddm.conf.d
+    screen_directory_create /etc/sddm.conf.d || return 1
     cat << EOF > /etc/sddm.conf.d/autologin.conf
 [Autologin]
-User=itg
+User=$itgmachine_user
 Session=itgmania
 Relogin=true
 EOF
 
-    mkdir -p /usr/local/share/xsessions
+    screen_directory_create /usr/local/share/xsessions || return 1
     cat << EOF > /usr/local/share/xsessions/itgmania.desktop
 [Desktop Entry]
 Type=XSession
 Exec=/usr/local/games/itgmania/itgmania
-# TryExec=/usr/local/games/itgmania/itgmania
-DesktopNames=ITGMania
-Name=ITGMania (X11)
-EOF
-
-}
-
-screen_pacdrive() {
-    cat << EOF > /etc/udev/rules.d/75-linux-pacdrive.rules
-SUBSYSTEM=="usb", ATTRS{idVendor}=="d209", ATTRS{idProduct}=="150[0-9]", MODE="0666"
+DesktopNames=ITGmania
+Name=ITGmania (X11)
 EOF
 }
+
+# # For usb profiles required
+# screen_fstab_validate() {
+#     local out
+
+#     if ! out=$(findmnt --verify); then
+#	msgbox "/etc/fstab validation failed:\n$out"
+#	return 1
+#     fi
+# }
+
+# screen_fstab() {
+#     screen_title="ITG Machine - FSTab"
+
+#     local updates
+#     local fstabroot
+#     local fstabsongs
+
+#     #screen_partition_validate "$root_partition" || return 1
+#     #screen_partition_validate "$songs_partition" || return 1
+
+#     if [[ "$root_partition" != "SKIP" ]]; then
+#	if fstabroot=$(findmnt -n --fstab -o SOURCE --target /); then
+#	    updates="$updates s|$fstabroot|$root_partition|;"
+#	else
+#	    msgbox "Installer couldn't detect root in fstab. Running validation.."
+#	    screen_fstab_validate
+#	fi
+#     fi
+
+#     if [[ "$songs_partition" != "SKIP" ]]; then
+#	if fstabsongs=$(findmnt -n --fstab -o SOURCE --target /home/itg/.itgmania/Songs); then
+#	    updates="$updates s|$fstabsongs|$songs_partition|;"
+#	else
+#	    echo "$songs_partition	/home/itg/.itgmania/Songs	ext4	discard,noatime,nodiratime,errors=remount-ro	0	0" >> /etc/fstab
+#	    screen_fstab_validate
+#	fi
+#     fi
+
+#     sed -i.bak "$updates" /etc/fstab
+# }
+
+# fstab_flash() {
+#     # todo: songs nofail, usb nofail
+#     cat << EOF > /tmp/fstab
+# /dev/disk/by-path/pci-0000:00:13.2-usb-0:6:1.0-scsi-0:0:0:0-part1       /mnt/P1 auto    rw,noatime,noauto,user  0       0
+# /dev/disk/by-path/pci-0000:00:13.2-usb-0:6:1.0-scsi-0:0:0:0             /mnt/P1 auto    rw,noatime,noauto,user  0       0
+
+# /dev/disk/by-path/pci-0000:00:13.2-usb-0:5:1.0-scsi-0:0:0:0-part1       /mnt/P2 auto    rw,noatime,noauto,user  0       0
+# /dev/disk/by-path/pci-0000:00:13.2-usb-0:5:1.0-scsi-0:0:0:0             /mnt/P2 auto    rw,noatime,noauto,user  0       0
+# EOF
+
+# }
+
+# screen_pacdrive() {
+#     cat << EOF > /etc/udev/rules.d/75-linux-pacdrive.rules
+# SUBSYSTEM=="usb", ATTRS{idVendor}=="d209", ATTRS{idProduct}=="150[0-9]", MODE="0666"
+# EOF
+# }
 
 screen_system() {
     screen_title="ITG Machine - System"
@@ -570,7 +551,6 @@ screen_system() {
 	screen_video_nvidia "Install NVidia video drivers (not implemented)" \
 	screen_video_amd "Install AMD video drivers (not implemented)" \
 	screen_reboot "Reboot after initial setup and upgrade"
-
 }
 
 screen_itgmania() {
@@ -578,11 +558,11 @@ screen_itgmania() {
     menubox \
 	screen_itgmania_dependencies "Install ITGmania runtime dependencies" \
 	screen_itgmania_download "Download ITGmania for Linux" \
+	screen_itgmania_sddm "Configure SDDM to run ITGMania" \
 	screen_itgmania_configure "Configure ITGmania (TODO)" \
 	screen_itgmania_usbprofiles "Configure USB Profiles (TODO)" \
 	screen_pacdrive "Configure Linux PacDrive (TODO)" \
 	screen_boogiestats "Configure Boogie Stats (TODO)" \
-	screen_sddm "Configure SDDM to run ITGMania" \
 	screen_reboot "Reboot to your new ITG Machine!"
 }
 

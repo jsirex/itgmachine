@@ -3,7 +3,7 @@
 
 Vagrant.configure("2") do |config|
   config.vm.box = "debian/bookworm64"
-  config.vm.disk :disk, size: "50GB", primary: true
+  config.vm.disk :disk, size: "10GB", primary: true
   config.vm.disk :dvd, name: "installer", file: "./debian-testing-amd64-netinst.iso"
 
   config.vm.provider "virtualbox" do |vb|
