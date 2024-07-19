@@ -57,7 +57,7 @@ kernel to UEFI partition`.
 ## Disk
 
 *NOTE: My first intention was to create machine with hidden partition for backup/restore purpose.*
-*Despite the fact I implement this complicated logic, after pondering about it, I decided to drop this.*
+*Despite the fact I've implemented this complicated logic, after pondering about it, I decided to drop this feature.*
 *If you think you need backup/restore just do it in your way and I keep installer simpler.*
 
 There is not strict disk layout required. Do it like you want. Here is some recommendation:
