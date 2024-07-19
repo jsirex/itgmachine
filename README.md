@@ -1,6 +1,3 @@
-# NOT READY YET
-
-
 # Introduction
 
 This tool is designed to automate the process of setting up a
@@ -10,6 +7,9 @@ without any other users or programs.
 
 **ITGMania** and several essential utilities will be deployed on the
 machine. Auto login and auto start will be configured.
+
+[Watch ITG Machine Installation Demo on Youtube](https://www.youtube.com/watch?v=5eEqjcrmgNE)
+
 
 # WARNING
 
@@ -69,13 +69,6 @@ There is not strict disk layout required. Do it like you want. Here is some reco
 - If you have separate `/home` you should backup files separately. If you wish. Or just machine profile. Maybe be in next versions
 - For running **ITGMania** with enough RAM swap is not required
 
-
-For example at the end it should like this (I used VirtualBox, but
-your partitions should have different size).
-
-![disk-partition.png](images/disk-partition.png)
-
-
 ## Reboot
 
 Reboot to your fresh installed system, install required firmware, etc.
@@ -99,31 +92,3 @@ You need to run `instal.sh` script either by copying it or by:
 
 `wget -O- https://raw.githubusercontent.com/jsirex/itgmachine/master/install.sh | bash -s`
 
-
-# After install
-
-If everything went fine you probably should see the following output of `df -h`:
-
-``` bash
-Filesystem      Size  Used Avail Use% Mounted on
-udev            6.6G     0  6.6G   0% /dev
-tmpfs           1.4G  1.8M  1.4G   1% /run
-/dev/nvme0n1p2   32G  2.2G   30G   7% /
-tmpfs           6.6G     0  6.6G   0% /dev/shm
-efivarfs        192K  111K   77K  60% /sys/firmware/efi/efivars
-tmpfs           5.0M     0  5.0M   0% /run/lock
-tmpfs           6.6G     0  6.6G   0% /tmp
-tmpfs           1.0M     0  1.0M   0% /run/credentials/systemd-udev-load-credentials.service
-tmpfs           1.0M     0  1.0M   0% /run/credentials/systemd-journald.service
-tmpfs           1.0M     0  1.0M   0% /run/credentials/systemd-tmpfiles-setup-dev-early.service
-tmpfs           1.0M     0  1.0M   0% /run/credentials/systemd-sysctl.service
-tmpfs           1.0M     0  1.0M   0% /run/credentials/systemd-tmpfiles-setup-dev.service
-/dev/nvme0n1p4  155G  110M  155G   1% /home/itg/.itgmania/Songs
-/dev/nvme0n1p1  188M   54M  134M  29% /boot/efi
-tmpfs           1.0M     0  1.0M   0% /run/credentials/systemd-tmpfiles-setup.service
-tmpfs           1.0M     0  1.0M   0% /run/credentials/getty@tty3.service
-tmpfs           1.4G   12K  1.4G   1% /run/user/0
-tmpfs           1.4G   16K  1.4G   1% /run/user/1000
-```
-
-Notice, that OS required only 2.2G
