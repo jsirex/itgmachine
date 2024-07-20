@@ -21,7 +21,9 @@ screen_title="ITG Machine"
 itgmachine_apt_updated="false"
 itgmachine_efi_dir="/boot/efi/EFI/itgmachine"
 
-itgmachine_user=itg
+itgmania_user=itg
+itgmania_home=/home/itg
+
 
 ### Whiptail interface
 # Each function unsets or returns wt_out
@@ -173,7 +175,7 @@ run() {
     "$@" || { echo "Exist status $?. Press enter to continue"; read -r; return 1; }
 }
 
-ensure_root() {
+screen_ensure_root() {
     if [[ $UID -ne 0 ]]; then
         msgbox "You must run this program as root"
 	exit 1
@@ -459,7 +461,7 @@ screen_itgmania_sddm() {
     screen_directory_create /etc/sddm.conf.d || return 1
     cat << EOF > /etc/sddm.conf.d/autologin.conf
 [Autologin]
-User=$itgmachine_user
+User=$itgmania_user
 Session=itgmania
 Relogin=true
 EOF
@@ -472,6 +474,57 @@ Exec=/usr/local/games/itgmania/itgmania
 DesktopNames=ITGmania
 Name=ITGmania (X11)
 EOF
+}
+
+screen_itgmania_user() {
+    local userent
+    local _x
+
+    inputbox "By default installer will use user 'itg' and home '/home/itg'. But you can change the user.
+Current user: $itgmania_user
+Current home: $itgmania_home
+
+Please enter the existing username that will be used to run ITGmania:" "$itgmania_user" || return 1
+    if userent=$(getent passwd "$wt_out"); then
+	IFS=: read -r itgmania_user _x _x _x _x itgmania_home _x <<< "$userent"
+    else
+	msgbox "User $wt_out does not exist. Try again"
+	return 1
+    fi
+
+}
+
+screen_crudini() {
+    screen_apt_package crudini
+}
+
+screen_itgmania_prefs() {
+    local prefs="$itgmania_home/.itgmania/Save/Preferences.ini"
+
+    screen_ensure_command crudini screen_crudini || return 1
+    true \
+	&& screen_directory_create "$itgmania_home/.itgmania" \
+	&& screen_directory_create "$itgmania_user/.itgmania/Save" \
+	&& chown "$itgmania_user:$itgmania_user" "$itgmania_home/.itgmania" \
+	&& chown "$itgmania_user:$itgmania_user" "$itgmania_home/.itgmania/Save" \
+	    || return 1
+
+    run crudini --set "$prefs" "$1" "$2" "$3"
+}
+
+screen_simplylove_gsapi() {
+    local slgs="/usr/local/games/itgmania/Themes/Simply Love/Scripts/SL-Helpers-GrooveStats.lua"
+    sed -i "s|.*local url_prefix = .*|        local url_prefix = \"$1\"|" "$slgs"
+}
+
+screen_boogiestats() {
+    if yesnobox "Turn on boogiestats?"; then
+	screen_itgmania_prefs "Options" "HttpAllowHosts" "*.groovestats.com,boogiestats.andr.host"
+	screen_simplylove_gsapi "https://boogiestats.andr.host/"
+    else
+	screen_itgmania_prefs "Options" "HttpAllowHosts" "*.groovestats.com"
+	screen_simplylove_gsapi "https://api.groovestats.com/"
+    fi
 }
 
 # # For usb profiles required
@@ -558,6 +611,7 @@ screen_itgmania() {
     menubox \
 	screen_itgmania_dependencies "Install ITGmania runtime dependencies" \
 	screen_itgmania_download "Download ITGmania for Linux" \
+	screen_itgmania_user "Select ITGmania user" \
 	screen_itgmania_sddm "Configure SDDM to run ITGMania" \
 	screen_itgmania_configure "Configure ITGmania (TODO)" \
 	screen_itgmania_usbprofiles "Configure USB Profiles (TODO)" \
@@ -584,5 +638,5 @@ if ! command -v whiptail &> /dev/null; then
     exit 58
 fi
 
-ensure_root
+screen_ensure_root
 screen_main
