@@ -24,36 +24,29 @@ itgmachine_efi_dir="/boot/efi/EFI/itgmachine"
 itgmania_user=itg
 itgmania_home=/home/itg
 
-
 ### Whiptail interface
 # Each function unsets or returns wt_out
 msgbox() {
     local message="$1"
-    local height=10
-    local lines=0
     unset wt_out # nothing to out
-
-    lines=$(echo "$message" | wc -w)
-    if [[ "$lines" -gt 40 ]]; then height=25; fi
 
     whiptail --title "$screen_title" \
 	     --backtitle "Use <up>/<down> to navigate, <enter> to select, <tab> to switch between buttons." \
 	     --scrolltext \
-             --msgbox "$message" $height 80
+             --msgbox "$message" 25 80
 }
 
 yesnobox() {
     local message="$1"
-    local height=10
-    local lines=0
     unset wt_out # nothing to out
 
-    lines=$(echo "$message" | wc -w)
-    if [[ "$lines" -gt 40 ]]; then height=25; fi
+    # lines=$(echo "$message" | wc -l)
+    # if [[ "$lines" -gt 4 ]]; then height=25; fi
+    # if [[ "${#message}" -gt 320 ]]; then height=25; fi
 
     whiptail --title "$screen_title" \
 	     --backtitle "Use <up>/<down> to navigate, <enter> to select, <tab> to switch between buttons." \
-             --yesno "$message" $height 80
+             --yesno "$message" 25 80
 }
 
 inputbox() {
@@ -189,7 +182,7 @@ screen_reboot() {
 screen_directory_create() {
     if [[ $# -eq 0 ]]; then return 1; fi
 
-    [[ -d "$1" ]] || run mkdir -p "$1" || { msgbox "Can't create dir: $1"; return 1; }
+    [[ -d "$1" ]] || run mkdir -p "$1"
 }
 
 screen_apt_update() {
@@ -375,7 +368,7 @@ screen_uefi_bootmgr() {
 
     if bootentry=$(efibootmgr -u | grep "$bootlabel"); then
 	bootnum="${bootentry:4:4}"
-	yesnobox "UEFI Boot Entry '$bootlabel' is already exist:\n $bootentry\nDelete existing?" \
+	yesnobox "UEFI Boot Entry '$bootlabel' is already exist:\n$bootentry\nDelete existing?" \
 	    && run efibootmgr -b "$bootnum" -B || return 1
     fi
 
@@ -389,6 +382,8 @@ screen_uefi() {
     screen_title="ITG Machine - UEFI"
 
     yesnobox "This can improve the boot time of your ITG Machine. When you turn on the machine, UEFI loads first. It then boots something from the EFI Boot partition, usually the Grub bootloader. Grub has its own settings and countdown timer, then it loads the ram disk (initramfs) and the kernel (vmlinuz). The kernel then initializes and runs the OS loader, which is Systemd in Debian. This setup skips Grub and directly loads the kernel when UEFI starts, making the boot process faster.
+
+NOTE: If /$(readlink /initrd.img) file is too big to copy on EFI partition, try to optimize the initramfs size by setting 'MODULES=dep' in '/etc/initramfs-tools/initramfs.conf' and running 'update-initramfs -k all -c -v'.
 
 Continue?" || return 1
 
@@ -414,6 +409,9 @@ screen_sound_pipewire() {
     screen_apt_package pipewire pipewire-audio wireplumber
 }
 
+screen_crudini() {
+    screen_apt_package crudini
+}
 
 screen_itgmania_dependencies() {
     screen_apt_package libusb-0.1-4 libgl1 libglvnd0 libglu1-mesa libxtst6 \
@@ -494,22 +492,63 @@ Please enter the existing username that will be used to run ITGmania:" "$itgmani
 
 }
 
-screen_crudini() {
-    screen_apt_package crudini
-}
-
 screen_itgmania_prefs() {
-    local prefs="$itgmania_home/.itgmania/Save/Preferences.ini"
+    if [[ ! -d "$itgmania_home" ]]; then msgbox "Home directory does not exist. Select an existing user"; return 1; fi
+
+    if [[ ! -d "$itgmania_home/.itgmania/Save" ]]; then
+	screen_directory_create "$itgmania_home/.itgmania/Save" \
+	    && run chown "$itgmania_user:$itgmania_user" "$itgmania_home/.itgmania" \
+	    && run chown "$itgmania_user:$itgmania_user" "$itgmania_home/.itgmania/Save" \
+		|| return 1
+    fi
 
     screen_ensure_command crudini screen_crudini || return 1
-    true \
-	&& screen_directory_create "$itgmania_home/.itgmania" \
-	&& screen_directory_create "$itgmania_user/.itgmania/Save" \
-	&& chown "$itgmania_user:$itgmania_user" "$itgmania_home/.itgmania" \
-	&& chown "$itgmania_user:$itgmania_user" "$itgmania_home/.itgmania/Save" \
-	    || return 1
 
-    run crudini --set "$prefs" "$1" "$2" "$3"
+    local prefs="$itgmania_home/.itgmania/Save/Preferences.ini"
+    run crudini --ini-options=nospace --set "$prefs" "$1" "$2" "$3"
+}
+
+screen_itgmania_configure() {
+    if yesnobox "Set arcade style navigation?"; then
+	screen_itgmania_prefs "Options" "ArcadeOptionsNavigation" "1"
+    else
+	screen_itgmania_prefs "Options" "ArcadeOptionsNavigation" "0"
+    fi
+
+    if yesnobox "Never play sounds during the attract mode, which is
+the mode where the game displays a demo or other visuals to attract
+players when not in use?"; then
+	screen_itgmania_prefs "Options" "AttractSoundFrequency" "Never"
+    else
+	screen_itgmania_prefs "Options" "AttractSoundFrequency" "EveryTime"
+    fi
+
+    if yesnobox "Turn off joysticks auto mapping?"; then
+	screen_itgmania_prefs "Options" "AutoMapOnJoyChange" "0"
+    else
+	screen_itgmania_prefs "Options" "AutoMapOnJoyChange" "1"
+    fi
+
+    inputbox "Set uniq machine name" "$(hostname -f)" \
+	&& screen_itgmania_prefs "Options" "MachineName" "$wt_out"
+
+    if yesnobox "Use only dedicated menu buttons for navigation?"; then
+	screen_itgmania_prefs "Options" "OnlyDedicatedMenuButtons" "1"
+    else
+	screen_itgmania_prefs "Options" "OnlyDedicatedMenuButtons" "0"
+    fi
+
+    if yesnobox "Turn off Vsync (recommended)?"; then
+	screen_itgmania_prefs "Options" "Vsync" "0"
+    else
+	screen_itgmania_prefs "Options" "Vsync" "1"
+    fi
+
+    if yesnobox "Set full screen mode (recommended)?"; then
+	screen_itgmania_prefs "Options" "Windowed" "0"
+    else
+	screen_itgmania_prefs "Options" "Windowed" "1"
+    fi
 }
 
 screen_simplylove_gsapi() {
@@ -518,7 +557,7 @@ screen_simplylove_gsapi() {
 }
 
 screen_boogiestats() {
-    if yesnobox "Turn on boogiestats?"; then
+    if yesnobox "Turn on BoogieStats?"; then
 	screen_itgmania_prefs "Options" "HttpAllowHosts" "*.groovestats.com,boogiestats.andr.host"
 	screen_simplylove_gsapi "https://boogiestats.andr.host/"
     else
@@ -609,15 +648,20 @@ screen_system() {
 screen_itgmania() {
     screen_title="ITG Machine - ITG Mania"
     menubox \
+	screen_itgmania_user "Select ITGmania user" \
 	screen_itgmania_dependencies "Install ITGmania runtime dependencies" \
 	screen_itgmania_download "Download ITGmania for Linux" \
-	screen_itgmania_user "Select ITGmania user" \
 	screen_itgmania_sddm "Configure SDDM to run ITGMania" \
-	screen_itgmania_configure "Configure ITGmania (TODO)" \
-	screen_itgmania_usbprofiles "Configure USB Profiles (TODO)" \
-	screen_pacdrive "Configure Linux PacDrive (TODO)" \
-	screen_boogiestats "Configure Boogie Stats (TODO)" \
+	screen_itgmania_configure "Configure ITGmania" \
+	screen_boogiestats "Configure BoogieStats" \
 	screen_reboot "Reboot to your new ITG Machine!"
+}
+
+screen_tweaks() {
+    screen_title="ITG Machine - Tweaks"
+    menubox \
+	screen_itgmania_usbprofiles "Configure USB Profiles (TODO)" \
+	screen_pacdrive "Configure Linux PacDrive (TODO)"
 }
 
 screen_main() {
@@ -625,7 +669,8 @@ screen_main() {
 
     menubox \
 	screen_system "Setup System" \
-	screen_itgmania "Setup ITG Mania"
+	screen_itgmania "Setup ITG Mania" \
+	screen_tweaks "Apply miscellaneous tweaks (TODO)"
 }
 
 # TUI is based on whiptail. We must check it manually before anything else
