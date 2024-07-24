@@ -69,6 +69,11 @@ There is not strict disk layout required. Do it like you want. Here is some reco
 - If you have separate `/home` you should backup files separately. If you wish. Or just machine profile. Maybe be in next versions
 - For running **ITGMania** with enough RAM swap is not required
 
+**IMPORTANT:** If you choose to load kernel directly from UEFI, make sure EFI boot partition is at least 256MB.
+EFI Boot partition may already have some files, sometimes up to 100 MB.
+The kernel (~10MB) and the initramfs disk (~50MB) will be copied onto EFI boot partition.
+In a rare case, if you install additional firmware packages and kernel modules (like NVidia), the initramfs file can suddenly grow up to 300 MB! Either you need big enough EFI bootpartition, or stay with grub, or optimize the initramfs size by setting `MODULES=dep` in `/etc/initramfs-tools/initramfs.conf` and running `update-initramfs -k all -c -v`.
+
 ## Reboot
 
 Reboot to your fresh installed system, install required firmware, etc.
