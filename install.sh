@@ -33,20 +33,16 @@ msgbox() {
     whiptail --title "$screen_title" \
 	     --backtitle "Use <up>/<down> to navigate, <enter> to select, <tab> to switch between buttons." \
 	     --scrolltext \
-             --msgbox "$message" 25 80
+             --msgbox "$message" 0 0
 }
 
 yesnobox() {
     local message="$1"
     unset wt_out # nothing to out
 
-    # lines=$(echo "$message" | wc -l)
-    # if [[ "$lines" -gt 4 ]]; then height=25; fi
-    # if [[ "${#message}" -gt 320 ]]; then height=25; fi
-
     whiptail --title "$screen_title" \
 	     --backtitle "Use <up>/<down> to navigate, <enter> to select, <tab> to switch between buttons." \
-             --yesno "$message" 25 80
+             --yesno "$message" 0 0
 }
 
 inputbox() {
@@ -55,7 +51,7 @@ inputbox() {
     unset wt_out
     wt_out=$(whiptail --title "$screen_title" \
 		      --backtitle "Use <up>/<down> to navigate, <enter> to select, <tab> to switch between buttons." \
-		      --inputbox "$message" 10 80 \
+		      --inputbox "$message" 12 80 \
                       "$default" 3>&1 1>&2 2>&3)
 }
 
@@ -64,7 +60,7 @@ passbox() {
     local default="$2"
     wt_out=$(whiptail --title "$screen_title" \
 		      --backtitle "Use <up>/<down> to navigate, <enter> to select, <tab> to switch between buttons." \
-		      --passwordbox "$message" 10 80 \
+		      --passwordbox "$message" 12 80 \
                       "$default" 3>&1 1>&2 2>&3)
 }
 
@@ -75,7 +71,7 @@ textbox() {
     whiptail --title "$screen_title" \
 	     --backtitle "Use <up>/<down> to navigate, <enter> to select, <tab> to switch between buttons." \
              --scrolltext \
-             --textbox "$file" 25 80
+             --textbox "$file" 0 0
 }
 
 radiobox() {
@@ -85,24 +81,14 @@ radiobox() {
     if [[ $(($# % 3)) -eq 1 ]]; then text="$1"; shift; fi
     local items=("$@")
 
-    while :; do
-	wt_out=$(whiptail --title "$screen_title" \
-			  --backtitle "Use <up>/<down> to navigate, <space> to select, <tab> to switch between buttons." \
-			  --ok-button "Select" \
-			  --cancel-button "Back" \
-			  --notags \
-			  --radiolist "$text" \
-                          25 80 16 \
-                          "${items[@]}" 3>&1 1>&2 2>&3)
-	wtst=$?
-	if [[ $wtst -ne 0 ]]; then return $wtst; fi
-	if [[ -n "$wt_out" ]]; then return 0; fi
-
-	msgbox "Nothing was selected. HINT: Use space to select an item."
-    done
-
-    # never can get here
-    return 100
+    wt_out=$(whiptail --title "$screen_title" \
+		      --backtitle "Use <up>/<down> to navigate, <space> to select, <tab> to switch between buttons." \
+		      --ok-button "Select" \
+		      --cancel-button "Back" \
+		      --notags \
+		      --radiolist "$text" \
+                      0 0 0 \
+                      "${items[@]}" 3>&1 1>&2 2>&3)
 }
 
 checkbox() {
@@ -112,24 +98,15 @@ checkbox() {
     if [[ $(($# % 3)) -eq 1 ]]; then text="$1"; shift; fi
     local items=("$@")
 
-    while :; do
-	wt_out=$(whiptail --title "$screen_title" \
-			  --backtitle "Use <up>/<down> to navigate, <space> to select, <tab> to switch between buttons." \
-			  --ok-button "Select" \
-			  --cancel-button "Back" \
-			  --notags \
-			  --checklist "$text" \
-                          25 80 16 \
-                          "${items[@]}" 3>&1 1>&2 2>&3)
-	wtst=$?
-	if [[ $wtst -ne 0 ]]; then return $wtst; fi
-	if [[ -n "$wt_out" ]]; then return 0; fi
-
-	msgbox "Nothing was selected. HINT: Use space to select an item."
-    done
-
-    # never can get here
-    return 100
+    wt_out=$(whiptail --title "$screen_title" \
+		      --backtitle "Use <up>/<down> to navigate, <space> to select, <tab> to switch between buttons." \
+		      --ok-button "Select" \
+		      --cancel-button "Back" \
+		      --notags \
+		      --separate-output \
+		      --checklist "$text" \
+                      0 0 0 \
+                      "${items[@]}" 3>&1 1>&2 2>&3)
 }
 
 menubox() {
@@ -151,7 +128,7 @@ menubox() {
 			  --notags \
 			  --default-item "$selected" \
 			  --menu "$text" \
-                          25 80 16 \
+                          0 0 0 \
                           "${items[@]}" 3>&1 1>&2 2>&3)
 	wtst=$?
 	selected="$wt_out"
