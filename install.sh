@@ -360,7 +360,7 @@ screen_uefi() {
 
     yesnobox "This can improve the boot time of your ITG Machine. When you turn on the machine, UEFI loads first. It then boots something from the EFI Boot partition, usually the Grub bootloader. Grub has its own settings and countdown timer, then it loads the ram disk (initramfs) and the kernel (vmlinuz). The kernel then initializes and runs the OS loader, which is Systemd in Debian. This setup skips Grub and directly loads the kernel when UEFI starts, making the boot process faster.
 
-NOTE: If /$(readlink /initrd.img) file is too big to copy on EFI partition, try to optimize the initramfs size by setting 'MODULES=dep' in '/etc/initramfs-tools/initramfs.conf' and running 'update-initramfs -k all -c -v'.
+NOTE: If $(readlink -f /initrd.img) file is too big to copy on EFI partition, try to optimize the initramfs size by setting 'MODULES=dep' in '/etc/initramfs-tools/initramfs.conf' and running 'update-initramfs -k all -c -v'.
 
 Continue?" || return 1
 
@@ -506,8 +506,11 @@ players when not in use?"; then
 	screen_itgmania_prefs "Options" "AutoMapOnJoyChange" "1"
     fi
 
-    inputbox "Set uniq machine name" "$(hostname -f)" \
-	&& screen_itgmania_prefs "Options" "MachineName" "$wt_out"
+    if inputbox "Set uniq machine name" "$(hostname -f)"; then
+	screen_itgmania_prefs "Options" "MachineName" "$wt_out"
+    else
+	screen_itgmania_prefs "Options" "MachineName" ""
+    fi
 
     if yesnobox "Use only dedicated menu buttons for navigation?"; then
 	screen_itgmania_prefs "Options" "OnlyDedicatedMenuButtons" "1"
