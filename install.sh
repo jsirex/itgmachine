@@ -546,6 +546,49 @@ screen_boogiestats() {
     fi
 }
 
+screen_itgmania_inputdevices() {
+    screen_title="ITG Machine - Input Devices"
+    local checkitems=()
+    local dev
+
+    msgbox "ITG Mania allows to explicitly define which joysticks in which order to load. This is very useful when you have two similar pad joystick which do initialization in different order randomly. Specifying input device by uniq id can freeze the order so keymap configuration is always correct. You can manually specify your devices using comma in Preferences.ini:
+InputDeviceOrder=/dev/input/by-id/p1-joystick,/dev/input/by-id/p2-joystick
+or
+InputDeviceOrder=/dev/input/by-path/u1-joystick,/dev/input/by-path/u2-joystick
+
+Now trying to detect joysticks 'by-id'"
+
+    if [[ ! -d "/dev/input/by-id" ]]; then
+	msgbox "Udev hasn't found any input devices by-id. Try to find them and add manually"
+	return 1
+    fi
+
+    for dev in /dev/input/by-id/*-joystick; do
+	[[ -c "$dev" ]] || continue
+	[[ "$dev" == *-event-joystick ]] && continue
+
+	checkitems+=("$dev" "$(basename "$dev")" "on")
+    done
+
+    checkbox "Select your joysticks used for pads and control if any:" "${checkitems[@]}" || return 1
+    if [[ -n "$wt_out" ]]; then
+	screen_itgmania_prefs "Options" "InputDeviceOrder" "$(echo -n "$wt_out" | tr '\n' ',')"
+    else
+	screen_itgmania_prefs "Options" "InputDeviceOrder" ""
+    fi
+}
+
+screen_udev_ghettio() {
+    yesnobox "GHETT-io joystick (v3) resets in a loop until a read attempt. This fix will add udev rule to automatically read joystick device using dd endlessly immediately after joystick is connected. Expected joystick has vendor id 16d0 and product id 0d02. You can run lsusb to see vendor and product ids.
+
+Add ghettio udev rule?" \
+	&& run cat << EOF > /etc/udev/rules.d/80-ghettio-joystick.rules \
+	&& run udevadm control --reload-rules
+# Workaround for ghettio: read joystick immediately so it stop resets in a loop:
+KERNEL=="js*", ATTRS{idVendor}=="16d0", ATTRS{idProduct}=="0d02", ACTION=="add", RUN+="/usr/bin/systemd-run dd if=/dev/input/%k of=/dev/null"
+EOF
+}
+
 # # For usb profiles required
 # screen_fstab_validate() {
 #     local out
@@ -633,6 +676,7 @@ screen_itgmania() {
 	screen_itgmania_download "Download ITGmania for Linux" \
 	screen_itgmania_sddm "Configure SDDM to run ITGMania" \
 	screen_itgmania_configure "Configure ITGmania" \
+	screen_itgmania_inputdevices "Configure input device order" \
 	screen_boogiestats "Configure BoogieStats" \
 	screen_reboot "Reboot to your new ITG Machine!"
 }
@@ -640,6 +684,7 @@ screen_itgmania() {
 screen_tweaks() {
     screen_title="ITG Machine - Tweaks"
     menubox \
+	screen_udev_ghettio "Fix ghettio endless reset under Linux" \
 	screen_itgmania_usbprofiles "Configure USB Profiles (TODO)" \
 	screen_pacdrive "Configure Linux PacDrive (TODO)"
 }
@@ -650,7 +695,7 @@ screen_main() {
     menubox \
 	screen_system "Setup System" \
 	screen_itgmania "Setup ITG Mania" \
-	screen_tweaks "Apply miscellaneous tweaks (TODO)"
+	screen_tweaks "Apply miscellaneous tweaks"
 }
 
 # TUI is based on whiptail. We must check it manually before anything else
