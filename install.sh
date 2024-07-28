@@ -589,6 +589,16 @@ KERNEL=="js*", ATTRS{idVendor}=="16d0", ATTRS{idProduct}=="0d02", ACTION=="add",
 EOF
 }
 
+screen_pacdrive() {
+    screen_itgmania_user || return 1
+
+    [[ "$(getent group input)" == *"$itgmania_user"* ]] \
+	|| run adduser "$itgmania_user" input \
+	|| return 1
+
+    screen_itgmania_prefs "Options" "LightsDriver" "LinuxPacDrive"
+}
+
 # # For usb profiles required
 # screen_fstab_validate() {
 #     local out
@@ -685,8 +695,8 @@ screen_tweaks() {
     screen_title="ITG Machine - Tweaks"
     menubox \
 	screen_udev_ghettio "Fix ghettio endless reset under Linux" \
-	screen_itgmania_usbprofiles "Configure USB Profiles (TODO)" \
-	screen_pacdrive "Configure Linux PacDrive (TODO)"
+	screen_pacdrive "Configure Linux PacDrive" \
+	screen_itgmania_usbprofiles "Configure USB Profiles (TODO)"
 }
 
 screen_main() {
