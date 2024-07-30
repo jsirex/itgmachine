@@ -596,6 +596,11 @@ screen_pacdrive() {
 	|| run adduser "$itgmania_user" input \
 	|| return 1
 
+    cat << EOF > /etc/udev/rules.d/75-linux-pacdrive.rules \
+	&& run udevadm control --reload-rules
+SUBSYSTEM=="usb", ATTRS{idVendor}=="d209", ATTRS{idProduct}=="150[0-9]", GROUP="input"
+EOF
+
     screen_itgmania_prefs "Options" "LightsDriver" "LinuxPacDrive"
 }
 
@@ -650,12 +655,6 @@ screen_pacdrive() {
 # /dev/disk/by-path/pci-0000:00:13.2-usb-0:5:1.0-scsi-0:0:0:0             /mnt/P2 auto    rw,noatime,noauto,user  0       0
 # EOF
 
-# }
-
-# screen_pacdrive() {
-#     cat << EOF > /etc/udev/rules.d/75-linux-pacdrive.rules
-# SUBSYSTEM=="usb", ATTRS{idVendor}=="d209", ATTRS{idProduct}=="150[0-9]", MODE="0666"
-# EOF
 # }
 
 screen_system() {
