@@ -582,7 +582,7 @@ screen_udev_ghettio() {
     yesnobox "GHETT-io joystick (v3) resets in a loop until a read attempt. This fix will add udev rule to automatically read joystick device using dd endlessly immediately after joystick is connected. Expected joystick has vendor id 16d0 and product id 0d02. You can run lsusb to see vendor and product ids.
 
 Add ghettio udev rule?" \
-	&& run cat << EOF > /etc/udev/rules.d/80-ghettio-joystick.rules \
+	&& cat << EOF > /etc/udev/rules.d/80-ghettio-joystick.rules \
 	&& run udevadm control --reload-rules
 # Workaround for ghettio: read joystick immediately so it stop resets in a loop:
 KERNEL=="js*", ATTRS{idVendor}=="16d0", ATTRS{idProduct}=="0d02", ACTION=="add", RUN+="/usr/bin/systemd-run dd if=/dev/input/%k of=/dev/null"
