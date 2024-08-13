@@ -178,7 +178,7 @@ screen_apt_upgrade() {
 screen_apt_repository() {
     screen_title="ITG Machine - APT"
 
-    local url="https://ftp.debian.org/debian"
+    local url="https://deb.debian.org/debian"
     local release="testing"
     local components="main contrib non-free non-free-firmware"
 
