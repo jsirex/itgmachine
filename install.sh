@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# -*- mode: bash-ts -*-
 
 # If you think I forgot about set -e:
 # Nope, I didn't. It just does not work as you expected:
@@ -31,8 +30,8 @@ msgbox() {
     unset wt_out # nothing to out
 
     whiptail --title "$screen_title" \
-	     --backtitle "Use <up>/<down> to navigate, <enter> to select, <tab> to switch between buttons." \
-	     --scrolltext \
+             --backtitle "Use <up>/<down> to navigate, <enter> to select, <tab> to switch between buttons." \
+             --scrolltext \
              --msgbox "$message" 0 0
 }
 
@@ -41,7 +40,7 @@ yesnobox() {
     unset wt_out # nothing to out
 
     whiptail --title "$screen_title" \
-	     --backtitle "Use <up>/<down> to navigate, <enter> to select, <tab> to switch between buttons." \
+             --backtitle "Use <up>/<down> to navigate, <enter> to select, <tab> to switch between buttons." \
              --yesno "$message" 0 0
 }
 
@@ -50,8 +49,8 @@ inputbox() {
     local default="$2"
     unset wt_out
     wt_out=$(whiptail --title "$screen_title" \
-		      --backtitle "Use <up>/<down> to navigate, <enter> to select, <tab> to switch between buttons." \
-		      --inputbox "$message" 12 80 \
+                      --backtitle "Use <up>/<down> to navigate, <enter> to select, <tab> to switch between buttons." \
+                      --inputbox "$message" 12 80 \
                       "$default" 3>&1 1>&2 2>&3)
 }
 
@@ -59,8 +58,8 @@ passbox() {
     local message="$1"
     local default="$2"
     wt_out=$(whiptail --title "$screen_title" \
-		      --backtitle "Use <up>/<down> to navigate, <enter> to select, <tab> to switch between buttons." \
-		      --passwordbox "$message" 12 80 \
+                      --backtitle "Use <up>/<down> to navigate, <enter> to select, <tab> to switch between buttons." \
+                      --passwordbox "$message" 12 80 \
                       "$default" 3>&1 1>&2 2>&3)
 }
 
@@ -69,7 +68,7 @@ textbox() {
     unset wt_out # nothing to out
 
     whiptail --title "$screen_title" \
-	     --backtitle "Use <up>/<down> to navigate, <enter> to select, <tab> to switch between buttons." \
+             --backtitle "Use <up>/<down> to navigate, <enter> to select, <tab> to switch between buttons." \
              --scrolltext \
              --textbox "$file" 0 0
 }
@@ -82,11 +81,11 @@ radiobox() {
     local items=("$@")
 
     wt_out=$(whiptail --title "$screen_title" \
-		      --backtitle "Use <up>/<down> to navigate, <space> to select, <tab> to switch between buttons." \
-		      --ok-button "Select" \
-		      --cancel-button "Back" \
-		      --notags \
-		      --radiolist "$text" \
+                      --backtitle "Use <up>/<down> to navigate, <space> to select, <tab> to switch between buttons." \
+                      --ok-button "Select" \
+                      --cancel-button "Back" \
+                      --notags \
+                      --radiolist "$text" \
                       0 0 0 \
                       "${items[@]}" 3>&1 1>&2 2>&3)
 }
@@ -99,12 +98,12 @@ checkbox() {
     local items=("$@")
 
     wt_out=$(whiptail --title "$screen_title" \
-		      --backtitle "Use <up>/<down> to navigate, <space> to select, <tab> to switch between buttons." \
-		      --ok-button "Select" \
-		      --cancel-button "Back" \
-		      --notags \
-		      --separate-output \
-		      --checklist "$text" \
+                      --backtitle "Use <up>/<down> to navigate, <space> to select, <tab> to switch between buttons." \
+                      --ok-button "Select" \
+                      --cancel-button "Back" \
+                      --notags \
+                      --separate-output \
+                      --checklist "$text" \
                       0 0 0 \
                       "${items[@]}" 3>&1 1>&2 2>&3)
 }
@@ -121,19 +120,19 @@ menubox() {
     local items=("$@")
 
     while :; do
-	wt_out=$(whiptail --title "$title" \
-			  --backtitle "Use <up>/<down> to navigate, <enter> to select, <tab> to switch between buttons." \
-			  --ok-button "Select" \
-			  --cancel-button "Back" \
-			  --notags \
-			  --default-item "$selected" \
-			  --menu "$text" \
+        wt_out=$(whiptail --title "$title" \
+                          --backtitle "Use <up>/<down> to navigate, <enter> to select, <tab> to switch between buttons." \
+                          --ok-button "Select" \
+                          --cancel-button "Back" \
+                          --notags \
+                          --default-item "$selected" \
+                          --menu "$text" \
                           0 0 0 \
                           "${items[@]}" 3>&1 1>&2 2>&3)
-	wtst=$?
-	selected="$wt_out"
-	if [[ $wtst -ne 0 ]]; then return $wtst; fi
-	if [[ "$wt_out" == screen_* ]]; then $wt_out; else return 0; fi
+        wtst=$?
+        selected="$wt_out"
+        if [[ $wtst -ne 0 ]]; then return $wtst; fi
+        if [[ "$wt_out" == screen_* ]]; then $wt_out; else return 0; fi
     done
 
     # never can get here
@@ -148,7 +147,7 @@ run() {
 screen_ensure_root() {
     if [[ $UID -ne 0 ]]; then
         msgbox "You must run this program as root"
-	exit 1
+        exit 1
     fi
 }
 
@@ -167,7 +166,7 @@ screen_apt_update() {
     if [[ "$itgmachine_apt_updated" == "true" ]]; then return 0; fi
 
     run apt -o APT::Update::Error-Mode=any update \
-	&& itgmachine_apt_updated="true"
+        && itgmachine_apt_updated="true"
 }
 
 screen_apt_upgrade() {
@@ -183,15 +182,15 @@ screen_apt_repository() {
     local components="main contrib non-free non-free-firmware"
 
     true \
-	&& inputbox "Enter Debian repository URL:" "$url" \
-	&& url="$wt_out" \
-	&& inputbox "Enter Debian Release:" "$release" \
-	&& release="$wt_out" \
-	&& inputbox "Enter Debian components:" "$components" \
-	&& components="$wt_out" \
-	&& yesnobox "Replace source.list with:\ndeb $url $release $components" \
-	&& echo "deb $url $release $components" > /etc/apt/sources.list \
-	&& screen_apt_update 1
+        && inputbox "Enter Debian repository URL:" "$url" \
+        && url="$wt_out" \
+        && inputbox "Enter Debian Release:" "$release" \
+        && release="$wt_out" \
+        && inputbox "Enter Debian components:" "$components" \
+        && components="$wt_out" \
+        && yesnobox "Replace source.list with:\ndeb $url $release $components" \
+        && echo "deb $url $release $components" > /etc/apt/sources.list \
+        && screen_apt_update 1
 }
 
 screen_apt_package() {
@@ -201,8 +200,8 @@ screen_apt_package() {
 
 screen_ensure_command() {
     if [[ $# -lt 2 ]]; then
-	msgbox "BUG: Too few arguments in ensure command screen: '$*'"
-	return 1
+        msgbox "BUG: Too few arguments in ensure command screen: '$*'"
+        return 1
     fi
 
     local cmd="$1"
@@ -217,7 +216,7 @@ screen_console_tools() {
     screen_title="ITG Machine - Console Tools"
 
     yesnobox "Install vim mc htop?" \
-	     && screen_apt_package vim mc htop
+        && screen_apt_package vim mc htop
 }
 
 screen_network_dhclient() {
@@ -243,8 +242,8 @@ screen_wifi_connect() {
     local ssid="$1"
 
     screen_ensure_command nmcli network-manager \
-	&& passbox "Enter password for $ssid" \
-	&& run nmcli device wifi connect "$ssid" password "$wt_out"
+        && passbox "Enter password for $ssid" \
+        && run nmcli device wifi connect "$ssid" password "$wt_out"
 }
 
 screen_wifi() {
@@ -266,13 +265,13 @@ screen_wifi() {
 
 screen_uefi_dir() {
     if ! mountpoint -q /boot/efi; then
-	msgbox "It looks like /boot/efi is not mounted. Do you have UEFI? Check and try again."
-	return 1
+        msgbox "It looks like /boot/efi is not mounted. Do you have UEFI? Check and try again."
+        return 1
     fi
 
     if [[ ! -d "/boot/efi/EFI" ]]; then
-	msgbox "While your /boot/efi partition is mounted, there is no EFI directory. Something went wrong here."
-	return 1
+        msgbox "While your /boot/efi partition is mounted, there is no EFI directory. Something went wrong here."
+        return 1
     fi
 
     screen_directory_create "$itgmachine_efi_dir"
@@ -292,8 +291,8 @@ EOF
     run "$hook" || { msgbox "Error while running $hook"; return 1; }
 
     [[ -f "$itgmachine_efi_dir/vmlinuz" ]] || {
-	msgbox "Something went wrong with kernel hook. File $itgmachine_efi_dir/vmlinuz was not found"
-	return 1
+        msgbox "Something went wrong with kernel hook. File $itgmachine_efi_dir/vmlinuz was not found"
+        return 1
     }
 }
 
@@ -313,8 +312,8 @@ EOF
     run "$hook" || { msgbox "Error while running $hook"; return 1; }
 
     [[ -f "$itgmachine_efi_dir/initrd.img" ]] || {
-	msgbox "Something went wrong with initramfs hook. File $itgmachine_efi_dir/initrd.img was not found"
-	return 1
+        msgbox "Something went wrong with initramfs hook. File $itgmachine_efi_dir/initrd.img was not found"
+        return 1
     }
 }
 
@@ -325,34 +324,34 @@ screen_uefi_bootmgr() {
     # Get root fs as in fstab
     fstabroot=$(findmnt -n --fstab -o SOURCE --target /)
     if [[ -z "$fstabroot" ]]; then
-	msgbox "Unable to detect rootfs in /etc/fstab. This is unexpected"
-	return 1;
+        msgbox "Unable to detect rootfs in /etc/fstab. This is unexpected"
+        return 1;
     fi
 
     # Get efi boot, but resolve to a device name
     fstabefi=$(findmnt -ne --fstab -o SOURCE --target /boot/efi)
     if [[ -z "$fstabefi" ]]; then
-	msgbox "Unable to detect EFI partition in /etc/fstab. Do you have it?"
-	return 1;
+        msgbox "Unable to detect EFI partition in /etc/fstab. Do you have it?"
+        return 1;
     fi
 
     # Get disk by fstabefi device name
     disk=$(lsblk -ndpo pkname "$fstabefi")
     if [[ -z "$disk" ]]; then
-	msgbox "Unable to detect disk for EFI partition $fstabefi. Bug in lsblk?"
-	return 1;
+        msgbox "Unable to detect disk for EFI partition $fstabefi. Bug in lsblk?"
+        return 1;
     fi
 
     if bootentry=$(efibootmgr -u | grep "$bootlabel"); then
-	bootnum="${bootentry:4:4}"
-	yesnobox "UEFI Boot Entry '$bootlabel' is already exist:\n$bootentry\nDelete existing?" \
-	    && run efibootmgr -b "$bootnum" -B || return 1
+        bootnum="${bootentry:4:4}"
+        yesnobox "UEFI Boot Entry '$bootlabel' is already exist:\n$bootentry\nDelete existing?" \
+            && run efibootmgr -b "$bootnum" -B || return 1
     fi
 
     run efibootmgr -c -g -L "$bootlabel" \
-	-d "$disk" \
-	-l '\EFI\itgmachine\vmlinuz' \
-	-u "root=$fstabroot rw quiet nmi_watchdog=0 initrd=\\EFI\\itgmachine\\initrd.img"
+        -d "$disk" \
+        -l '\EFI\itgmachine\vmlinuz' \
+        -u "root=$fstabroot rw quiet nmi_watchdog=0 initrd=\\EFI\\itgmachine\\initrd.img"
 }
 
 screen_uefi() {
@@ -365,11 +364,11 @@ NOTE: If $(readlink -f /initrd.img) file is too big to copy on EFI partition, tr
 Continue?" || return 1
 
     true \
-	&& screen_uefi_dir \
-	&& screen_kernel_uefi_hook \
-	&& screen_initramfs_uefi_hook \
-	&& screen_uefi_bootmgr \
-	&& msgbox "All checks have passed! You are on UEFI now. If something goes wrong you still have your previous boot options. You can choose different boot options from UEFI Boot Menu."
+        && screen_uefi_dir \
+        && screen_kernel_uefi_hook \
+        && screen_initramfs_uefi_hook \
+        && screen_uefi_bootmgr \
+        && msgbox "All checks have passed! You are on UEFI now. If something goes wrong you still have your previous boot options. You can choose different boot options from UEFI Boot Menu."
 }
 
 screen_openssh() {
@@ -378,8 +377,8 @@ screen_openssh() {
 
 screen_vsftpd() {
     screen_apt_package vsftpd \
-	&& run sed -i 's/#write_enable=YES/write_enable=YES/' /etc/vsftpd.conf \
-	&& run systemctl restart vsftpd
+        && run sed -i 's/#write_enable=YES/write_enable=YES/' /etc/vsftpd.conf \
+        && run systemctl restart vsftpd
 }
 
 screen_sound_pipewire() {
@@ -392,7 +391,7 @@ screen_crudini() {
 
 screen_itgmania_dependencies() {
     screen_apt_package libusb-0.1-4 libgl1 libglvnd0 libglu1-mesa libxtst6 \
-		       libxinerama1 libgdk-pixbuf-2.0-0 libgtk-3-0t64
+                       libxinerama1 libgdk-pixbuf-2.0-0 libgtk-3-0t64
 }
 
 screen_itgmania_download() {
@@ -403,7 +402,7 @@ screen_itgmania_download() {
     local archive_url archive_name archive_file archive_dir
 
     while read -r archive_url; do
-	menuitems+=("$archive_url" "$(basename "$archive_url")")
+        menuitems+=("$archive_url" "$(basename "$archive_url")")
     done < <(wget -qO- "$ghapi" | grep -o "$releases")
 
     menubox "Select ITGmania version from the list below:" "${menuitems[@]}" || return 1
@@ -415,12 +414,12 @@ screen_itgmania_download() {
     screen_directory_create "$cache" || return 1
 
     [[ -f "$archive_file" ]] || run wget -q --tries 3 --show-progress -O "$archive_file" "$archive_url" \
-	|| { msgbox "Failed to download $archive_name from url:\n$url"; return 1; }
+        || { msgbox "Failed to download $archive_name from url:\n$url"; return 1; }
 
     screen_directory_create "$archive_dir" || return 1
 
     [[ -x "$archive_dir/itgmania" ]] || run tar -C "$archive_dir" -xf "$archive_file" --strip-components 2 \
-	|| { msgbox "Can't unpack ITGmania from archive: $archive_file"; return 1; }
+        || { msgbox "Can't unpack ITGmania from archive: $archive_file"; return 1; }
 
     run ln -sfn "$archive_dir" /usr/local/games/itgmania || { msgbox "Can't update symlink"; return 1; }
 
@@ -461,10 +460,10 @@ Current home: $itgmania_home
 
 Please enter the existing username that will be used to run ITGmania:" "$itgmania_user" || return 1
     if userent=$(getent passwd "$wt_out"); then
-	IFS=: read -r itgmania_user _x _x _x _x itgmania_home _x <<< "$userent"
+        IFS=: read -r itgmania_user _x _x _x _x itgmania_home _x <<< "$userent"
     else
-	msgbox "User $wt_out does not exist. Try again"
-	return 1
+        msgbox "User $wt_out does not exist. Try again"
+        return 1
     fi
 
 }
@@ -473,10 +472,10 @@ screen_itgmania_prefs() {
     if [[ ! -d "$itgmania_home" ]]; then msgbox "Home directory does not exist. Select an existing user"; return 1; fi
 
     if [[ ! -d "$itgmania_home/.itgmania/Save" ]]; then
-	screen_directory_create "$itgmania_home/.itgmania/Save" \
-	    && run chown "$itgmania_user:$itgmania_user" "$itgmania_home/.itgmania" \
-	    && run chown "$itgmania_user:$itgmania_user" "$itgmania_home/.itgmania/Save" \
-		|| return 1
+        screen_directory_create "$itgmania_home/.itgmania/Save" \
+            && run chown "$itgmania_user:$itgmania_user" "$itgmania_home/.itgmania" \
+            && run chown "$itgmania_user:$itgmania_user" "$itgmania_home/.itgmania/Save" \
+                || return 1
     fi
 
     screen_ensure_command crudini screen_crudini || return 1
@@ -487,47 +486,47 @@ screen_itgmania_prefs() {
 
 screen_itgmania_configure() {
     if yesnobox "Set arcade style navigation?"; then
-	screen_itgmania_prefs "Options" "ArcadeOptionsNavigation" "1"
+        screen_itgmania_prefs "Options" "ArcadeOptionsNavigation" "1"
     else
-	screen_itgmania_prefs "Options" "ArcadeOptionsNavigation" "0"
+        screen_itgmania_prefs "Options" "ArcadeOptionsNavigation" "0"
     fi
 
     if yesnobox "Never play sounds during the attract mode, which is
 the mode where the game displays a demo or other visuals to attract
 players when not in use?"; then
-	screen_itgmania_prefs "Options" "AttractSoundFrequency" "Never"
+        screen_itgmania_prefs "Options" "AttractSoundFrequency" "Never"
     else
-	screen_itgmania_prefs "Options" "AttractSoundFrequency" "EveryTime"
+        screen_itgmania_prefs "Options" "AttractSoundFrequency" "EveryTime"
     fi
 
     if yesnobox "Turn off joysticks auto mapping?"; then
-	screen_itgmania_prefs "Options" "AutoMapOnJoyChange" "0"
+        screen_itgmania_prefs "Options" "AutoMapOnJoyChange" "0"
     else
-	screen_itgmania_prefs "Options" "AutoMapOnJoyChange" "1"
+        screen_itgmania_prefs "Options" "AutoMapOnJoyChange" "1"
     fi
 
     if inputbox "Set uniq machine name" "$(hostname -f)"; then
-	screen_itgmania_prefs "Options" "MachineName" "$wt_out"
+        screen_itgmania_prefs "Options" "MachineName" "$wt_out"
     else
-	screen_itgmania_prefs "Options" "MachineName" ""
+        screen_itgmania_prefs "Options" "MachineName" ""
     fi
 
     if yesnobox "Use only dedicated menu buttons for navigation?"; then
-	screen_itgmania_prefs "Options" "OnlyDedicatedMenuButtons" "1"
+        screen_itgmania_prefs "Options" "OnlyDedicatedMenuButtons" "1"
     else
-	screen_itgmania_prefs "Options" "OnlyDedicatedMenuButtons" "0"
+        screen_itgmania_prefs "Options" "OnlyDedicatedMenuButtons" "0"
     fi
 
     if yesnobox "Turn off Vsync (recommended)?"; then
-	screen_itgmania_prefs "Options" "Vsync" "0"
+        screen_itgmania_prefs "Options" "Vsync" "0"
     else
-	screen_itgmania_prefs "Options" "Vsync" "1"
+        screen_itgmania_prefs "Options" "Vsync" "1"
     fi
 
     if yesnobox "Set full screen mode (recommended)?"; then
-	screen_itgmania_prefs "Options" "Windowed" "0"
+        screen_itgmania_prefs "Options" "Windowed" "0"
     else
-	screen_itgmania_prefs "Options" "Windowed" "1"
+        screen_itgmania_prefs "Options" "Windowed" "1"
     fi
 }
 
@@ -538,11 +537,11 @@ screen_simplylove_gsapi() {
 
 screen_boogiestats() {
     if yesnobox "Turn on BoogieStats?"; then
-	screen_itgmania_prefs "Options" "HttpAllowHosts" "*.groovestats.com,boogiestats.andr.host"
-	screen_simplylove_gsapi "https://boogiestats.andr.host/"
+        screen_itgmania_prefs "Options" "HttpAllowHosts" "*.groovestats.com,boogiestats.andr.host"
+        screen_simplylove_gsapi "https://boogiestats.andr.host/"
     else
-	screen_itgmania_prefs "Options" "HttpAllowHosts" "*.groovestats.com"
-	screen_simplylove_gsapi "https://api.groovestats.com/"
+        screen_itgmania_prefs "Options" "HttpAllowHosts" "*.groovestats.com"
+        screen_simplylove_gsapi "https://api.groovestats.com/"
     fi
 }
 
@@ -559,22 +558,22 @@ InputDeviceOrder=/dev/input/by-path/u1-joystick,/dev/input/by-path/u2-joystick
 Now trying to detect joysticks 'by-id'"
 
     if [[ ! -d "/dev/input/by-id" ]]; then
-	msgbox "Udev hasn't found any input devices by-id. Try to find them and add manually"
-	return 1
+        msgbox "Udev hasn't found any input devices by-id. Try to find them and add manually"
+        return 1
     fi
 
     for dev in /dev/input/by-id/*-joystick; do
-	[[ -c "$dev" ]] || continue
-	[[ "$dev" == *-event-joystick ]] && continue
+        [[ -c "$dev" ]] || continue
+        [[ "$dev" == *-event-joystick ]] && continue
 
-	checkitems+=("$dev" "$(basename "$dev")" "on")
+        checkitems+=("$dev" "$(basename "$dev")" "on")
     done
 
     checkbox "Select your joysticks used for pads and control if any:" "${checkitems[@]}" || return 1
     if [[ -n "$wt_out" ]]; then
-	screen_itgmania_prefs "Options" "InputDeviceOrder" "$(echo -n "$wt_out" | tr '\n' ',')"
+        screen_itgmania_prefs "Options" "InputDeviceOrder" "$(echo -n "$wt_out" | tr '\n' ',')"
     else
-	screen_itgmania_prefs "Options" "InputDeviceOrder" ""
+        screen_itgmania_prefs "Options" "InputDeviceOrder" ""
     fi
 }
 
@@ -582,8 +581,8 @@ screen_udev_ghettio() {
     yesnobox "GHETT-io joystick (v3) resets in a loop until a read attempt. This fix will add udev rule to automatically read joystick device using dd endlessly immediately after joystick is connected. Expected joystick has vendor id 16d0 and product id 0d02. You can run lsusb to see vendor and product ids.
 
 Add ghettio udev rule?" \
-	&& cat << EOF > /etc/udev/rules.d/80-ghettio-joystick.rules \
-	&& run udevadm control --reload-rules
+        && cat << EOF > /etc/udev/rules.d/80-ghettio-joystick.rules \
+        && run udevadm control --reload-rules
 # Workaround for ghettio: read joystick immediately so it stop resets in a loop:
 KERNEL=="js*", ATTRS{idVendor}=="16d0", ATTRS{idProduct}=="0d02", ACTION=="add", RUN+="/usr/bin/systemd-run dd if=/dev/input/%k of=/dev/null"
 EOF
@@ -593,24 +592,25 @@ screen_pacdrive() {
     screen_itgmania_user || return 1
 
     [[ "$(getent group input)" == *"$itgmania_user"* ]] \
-	|| run adduser "$itgmania_user" input \
-	|| return 1
+        || run adduser "$itgmania_user" input \
+        || return 1
 
     cat << EOF > /etc/udev/rules.d/75-linux-pacdrive.rules \
-	&& run udevadm control --reload-rules
+        && run udevadm control --reload-rules
 SUBSYSTEM=="usb", ATTRS{idVendor}=="d209", ATTRS{idProduct}=="150[0-9]", GROUP="input"
 EOF
 
     screen_itgmania_prefs "Options" "LightsDriver" "LinuxPacDrive"
 }
 
+
 # # For usb profiles required
 # screen_fstab_validate() {
 #     local out
 
 #     if ! out=$(findmnt --verify); then
-#	msgbox "/etc/fstab validation failed:\n$out"
-#	return 1
+#   msgbox "/etc/fstab validation failed:\n$out"
+#   return 1
 #     fi
 # }
 
@@ -625,21 +625,21 @@ EOF
 #     #screen_partition_validate "$songs_partition" || return 1
 
 #     if [[ "$root_partition" != "SKIP" ]]; then
-#	if fstabroot=$(findmnt -n --fstab -o SOURCE --target /); then
-#	    updates="$updates s|$fstabroot|$root_partition|;"
-#	else
-#	    msgbox "Installer couldn't detect root in fstab. Running validation.."
-#	    screen_fstab_validate
-#	fi
+#   if fstabroot=$(findmnt -n --fstab -o SOURCE --target /); then
+#       updates="$updates s|$fstabroot|$root_partition|;"
+#   else
+#       msgbox "Installer couldn't detect root in fstab. Running validation.."
+#       screen_fstab_validate
+#   fi
 #     fi
 
 #     if [[ "$songs_partition" != "SKIP" ]]; then
-#	if fstabsongs=$(findmnt -n --fstab -o SOURCE --target /home/itg/.itgmania/Songs); then
-#	    updates="$updates s|$fstabsongs|$songs_partition|;"
-#	else
-#	    echo "$songs_partition	/home/itg/.itgmania/Songs	ext4	discard,noatime,nodiratime,errors=remount-ro	0	0" >> /etc/fstab
-#	    screen_fstab_validate
-#	fi
+#   if fstabsongs=$(findmnt -n --fstab -o SOURCE --target /home/itg/.itgmania/Songs); then
+#       updates="$updates s|$fstabsongs|$songs_partition|;"
+#   else
+#       echo "$songs_partition  /home/itg/.itgmania/Songs   ext4    discard,noatime,nodiratime,errors=remount-ro    0   0" >> /etc/fstab
+#       screen_fstab_validate
+#   fi
 #     fi
 
 #     sed -i.bak "$updates" /etc/fstab
@@ -661,50 +661,50 @@ screen_system() {
     screen_title="ITG Machine - System"
 
     menubox \
-	screen_network_dhclient "Ad-hoc connect to the network " \
-	screen_apt_repository "Setup Debian Repository" \
+        screen_network_dhclient "Ad-hoc connect to the network " \
+        screen_apt_repository "Setup Debian Repository" \
         screen_apt_upgrade "Upgrade Debian" \
         screen_network_manager "Install Network Manager" \
         screen_wifi "Setup WiFi Network (optional)" \
-	screen_console_tools "Install useful console tools" \
-	screen_openssh "Install openssh server (optional)" \
-	screen_vsftpd "Install simple FTP server (vsftpd)" \
-	screen_uefi "Install kernel to UEFI partition" \
+        screen_console_tools "Install useful console tools" \
+        screen_openssh "Install openssh server (optional)" \
+        screen_vsftpd "Install simple FTP server (vsftpd)" \
+        screen_uefi "Install kernel to UEFI partition" \
         screen_sound_pipewire "Install Pipewire audio system" \
-	screen_video_intel "Install Intel video drivers (not implemented)" \
-	screen_video_nvidia "Install NVidia video drivers (not implemented)" \
-	screen_video_amd "Install AMD video drivers (not implemented)" \
-	screen_reboot "Reboot after initial setup and upgrade"
+        screen_video_intel "Install Intel video drivers (not implemented)" \
+        screen_video_nvidia "Install NVidia video drivers (not implemented)" \
+        screen_video_amd "Install AMD video drivers (not implemented)" \
+        screen_reboot "Reboot after initial setup and upgrade"
 }
 
 screen_itgmania() {
     screen_title="ITG Machine - ITG Mania"
     menubox \
-	screen_itgmania_user "Select ITGmania user" \
-	screen_itgmania_dependencies "Install ITGmania runtime dependencies" \
-	screen_itgmania_download "Download ITGmania for Linux" \
-	screen_itgmania_sddm "Configure SDDM to run ITGMania" \
-	screen_itgmania_configure "Configure ITGmania" \
-	screen_itgmania_inputdevices "Configure input device order" \
-	screen_boogiestats "Configure BoogieStats" \
-	screen_reboot "Reboot to your new ITG Machine!"
+        screen_itgmania_user "Select ITGmania user" \
+        screen_itgmania_dependencies "Install ITGmania runtime dependencies" \
+        screen_itgmania_download "Download ITGmania for Linux" \
+        screen_itgmania_sddm "Configure SDDM to run ITGMania" \
+        screen_itgmania_configure "Configure ITGmania" \
+        screen_itgmania_inputdevices "Configure input device order" \
+        screen_boogiestats "Configure BoogieStats" \
+        screen_reboot "Reboot to your new ITG Machine!"
 }
 
 screen_tweaks() {
     screen_title="ITG Machine - Tweaks"
     menubox \
-	screen_udev_ghettio "Fix ghettio endless reset under Linux" \
-	screen_pacdrive "Configure Linux PacDrive" \
-	screen_itgmania_usbprofiles "Configure USB Profiles (TODO)"
+        screen_udev_ghettio "Fix ghettio endless reset under Linux" \
+        screen_pacdrive "Configure Linux PacDrive" \
+        screen_itgmania_usbprofiles "Configure USB Profiles (TODO)"
 }
 
 screen_main() {
     screen_title="ITG Machine - Main"
 
     menubox \
-	screen_system "Setup System" \
-	screen_itgmania "Setup ITG Mania" \
-	screen_tweaks "Apply miscellaneous tweaks"
+        screen_system "Setup System" \
+        screen_itgmania "Setup ITG Mania" \
+        screen_tweaks "Apply miscellaneous tweaks"
 }
 
 # TUI is based on whiptail. We must check it manually before anything else
