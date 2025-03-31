@@ -598,6 +598,7 @@ screen_pacdrive() {
     cat << EOF > /etc/udev/rules.d/75-linux-pacdrive.rules \
         && run udevadm control --reload-rules
 SUBSYSTEM=="usb", ATTRS{idVendor}=="d209", ATTRS{idProduct}=="150[0-9]", GROUP="input"
+KERNEL=="hidraw*", ATTRS{idVendor}=="d209", ATTRS{idProduct}=="150[0-9]", GROUP="input"
 EOF
 
     screen_itgmania_prefs "Options" "LightsDriver" "LinuxPacDrive"
