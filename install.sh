@@ -242,7 +242,7 @@ screen_wifi_connect() {
     local ssid="$1"
 
     screen_ensure_command nmcli network-manager \
-        && passbox "Enter password for $ssid" \
+        && passbox "Enter password for $ssid" "" \
         && run nmcli device wifi connect "$ssid" password "$wt_out"
 }
 
