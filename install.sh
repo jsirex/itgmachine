@@ -20,8 +20,11 @@ screen_title="ITG Machine"
 itgmachine_apt_updated="false"
 itgmachine_efi_dir="/boot/efi/EFI/itgmachine"
 
-itgmania_user=itg
-itgmania_home=/home/itg
+itgmachine_user=itg
+itgmachine_home=/home/itg
+
+itgmachine_cache=/var/cache/itgmachine
+itgmachine_install=/usr/local/games
 
 ### Whiptail interface
 # Each function unsets or returns wt_out
@@ -177,20 +180,26 @@ screen_apt_upgrade() {
 screen_apt_repository() {
     screen_title="ITG Machine - APT"
 
-    local url="https://deb.debian.org/debian"
-    local release="testing"
+    local uri="http://deb.debian.org/debian"
+    local suite="testing"
     local components="main contrib non-free non-free-firmware"
+    local keyring="/usr/share/keyrings/debian-archive-keyring.pgp"
+    local file="/etc/apt/sources.list.d/debian.sources"
 
     true \
-        && inputbox "Enter Debian repository URL:" "$url" \
-        && url="$wt_out" \
-        && inputbox "Enter Debian Release:" "$release" \
-        && release="$wt_out" \
+        && inputbox "Enter Debian repository URI:" "$uri" \
+        && uri="$wt_out" \
+        && inputbox "Enter Debian Suite:" "$suite" \
+        && suite="$wt_out" \
         && inputbox "Enter Debian components:" "$components" \
         && components="$wt_out" \
-        && yesnobox "Replace source.list with:\ndeb $url $release $components" \
-        && echo "deb $url $release $components" > /etc/apt/sources.list \
-        && screen_apt_update 1
+        && yesnobox "Update sources with:\nURIs: $uri\nSuites: $suite\nComponents: $components" \
+        && echo "Types: deb" > "$file" \
+        && echo "URIs: $uri" >> "$file" \
+        && echo "Suites: $suite" >> "$file" \
+        && echo "Components: $components" >> "$file" \
+        && echo "Signed-By: $keyring" >> "$file" \
+        && screen_apt_update force
 }
 
 screen_apt_package() {
@@ -394,39 +403,76 @@ screen_itgmania_dependencies() {
                        libxinerama1 libgdk-pixbuf-2.0-0 libgtk-3-0t64
 }
 
-screen_itgmania_download() {
+screen_itgmania_install_archive() {
+    if [[ $# -eq 0 ]]; then return 1; fi
+
+    local archive_url="$1"
+    local archive_name archive_file target_dir
+
+    archive_name="$(basename "$archive_url")"
+    archive_file="$itgmachine_cache/$archive_name"
+    target_dir="$itgmachine_install/$(basename "$archive_name" .tar.gz)"
+
+    screen_directory_create "$itgmachine_cache" || return 1
+
+    [[ -f "$archive_file" ]] || run wget -q --tries 3 --show-progress -O "$archive_file" "$archive_url" \
+        || { msgbox "Failed to download $archive_name from url:\n$archive_url"; return 1; }
+
+    [[ -x "$target_dir/itgmania" ]] \
+        && yesnobox "Looks like already installed.\nDelete $target_dir?" \
+        && run rm -rf "$target_dir"
+
+    screen_directory_create "$target_dir" || return 1
+
+    [[ -x "$target_dir/itgmania" ]] || run tar -C "$target_dir" -xf "$archive_file" --strip-components 2 \
+        || { msgbox "Can't unpack ITGmania from archive: $archive_file"; return 1; }
+
+    run ln -sfn "$target_dir" "$itgmachine_install"/itgmania || { msgbox "Can't update symlink"; return 1; }
+
+    msgbox "ITGmania has been cached and installed.
+Also symlink $itgmachine_install/itgmania has been updated.
+Name: $archive_name
+DIR: $target_dir"
+}
+
+screen_itgmania_install_cached() {
+    local menuitems=()
+    local archive_file
+
+    while read -r archive_file; do
+        menuitems+=("$archive_file" "$(basename "$archive_file")")
+    done < <(find "$itgmachine_cache" -type f -name '*.tar.gz')
+
+    [[ ${#menuitems[@]} -eq 0 ]] \
+        && { msgbox "No cached files were found."; return 1; }
+
+    menubox "Select ITGmania version from the list below:" "${menuitems[@]}" || return 1
+    screen_itgmania_install_archive "$wt_out" || return 1
+}
+
+screen_itgmania_install_release() {
     local ghapi="https://api.github.com/repos/itgmania/itgmania/releases?page=1&per_page=5"
     local releases='https://github.com/itgmania/itgmania/releases/download/.*Linux-no-songs.tar.gz'
-    local cache=/var/cache/itgmachine
     local menuitems=()
-    local archive_url archive_name archive_file archive_dir
+    local archive_url
 
     while read -r archive_url; do
         menuitems+=("$archive_url" "$(basename "$archive_url")")
     done < <(wget -qO- "$ghapi" | grep -o "$releases")
 
+    [[ ${#menuitems[@]} -eq 0 ]] \
+        && { msgbox "Impossible, can't find any releases!"; return 1; }
+
     menubox "Select ITGmania version from the list below:" "${menuitems[@]}" || return 1
-    archive_url="$wt_out"
-    archive_name="$(basename "$archive_url")"
-    archive_file="$cache/$archive_name"
-    archive_dir="/usr/local/games/$(basename "$archive_name" .tar.gz)"
+    screen_itgmania_install_archive "$wt_out" || return 1
+}
 
-    screen_directory_create "$cache" || return 1
+screen_itgmania_install() {
+    screen_title="ITG Machine - ITG Mania Installation Center"
 
-    [[ -f "$archive_file" ]] || run wget -q --tries 3 --show-progress -O "$archive_file" "$archive_url" \
-        || { msgbox "Failed to download $archive_name from url:\n$url"; return 1; }
-
-    screen_directory_create "$archive_dir" || return 1
-
-    [[ -x "$archive_dir/itgmania" ]] || run tar -C "$archive_dir" -xf "$archive_file" --strip-components 2 \
-        || { msgbox "Can't unpack ITGmania from archive: $archive_file"; return 1; }
-
-    run ln -sfn "$archive_dir" /usr/local/games/itgmania || { msgbox "Can't update symlink"; return 1; }
-
-    msgbox "ITGmania has been cached and installed.
-Also symlink /usr/local/games/itgmania has been updated.
-Name: $archive_name
-DIR: $archive_dir"
+    menubox \
+        screen_itgmania_install_release "Install release version" \
+        screen_itgmania_install_cached "Install from cache"
 }
 
 screen_itgmania_sddm() {
@@ -435,7 +481,7 @@ screen_itgmania_sddm() {
     screen_directory_create /etc/sddm.conf.d || return 1
     cat << EOF > /etc/sddm.conf.d/autologin.conf
 [Autologin]
-User=$itgmania_user
+User=$itgmachine_user
 Session=itgmania
 Relogin=true
 EOF
@@ -444,7 +490,7 @@ EOF
     cat << EOF > /usr/local/share/xsessions/itgmania.desktop
 [Desktop Entry]
 Type=XSession
-Exec=/usr/local/games/itgmania/itgmania
+Exec=$itgmachine_install/itgmania/itgmania
 DesktopNames=ITGmania
 Name=ITGmania (X11)
 EOF
@@ -455,12 +501,12 @@ screen_itgmania_user() {
     local _x
 
     inputbox "By default installer will use user 'itg' and home '/home/itg'. But you can change the user.
-Current user: $itgmania_user
-Current home: $itgmania_home
+Current user: $itgmachine_user
+Current home: $itgmachine_home
 
-Please enter the existing username that will be used to run ITGmania:" "$itgmania_user" || return 1
+Please enter the existing username that will be used to run ITGmania:" "$itgmachine_user" || return 1
     if userent=$(getent passwd "$wt_out"); then
-        IFS=: read -r itgmania_user _x _x _x _x itgmania_home _x <<< "$userent"
+        IFS=: read -r itgmachine_user _x _x _x _x itgmachine_home _x <<< "$userent"
     else
         msgbox "User $wt_out does not exist. Try again"
         return 1
@@ -469,18 +515,18 @@ Please enter the existing username that will be used to run ITGmania:" "$itgmani
 }
 
 screen_itgmania_prefs() {
-    if [[ ! -d "$itgmania_home" ]]; then msgbox "Home directory does not exist. Select an existing user"; return 1; fi
+    if [[ ! -d "$itgmachine_home" ]]; then msgbox "Home directory does not exist. Select an existing user"; return 1; fi
 
-    if [[ ! -d "$itgmania_home/.itgmania/Save" ]]; then
-        screen_directory_create "$itgmania_home/.itgmania/Save" \
-            && run chown "$itgmania_user:$itgmania_user" "$itgmania_home/.itgmania" \
-            && run chown "$itgmania_user:$itgmania_user" "$itgmania_home/.itgmania/Save" \
+    if [[ ! -d "$itgmachine_home/.itgmania/Save" ]]; then
+        screen_directory_create "$itgmachine_home/.itgmania/Save" \
+            && run chown "$itgmachine_user:$itgmachine_user" "$itgmachine_home/.itgmania" \
+            && run chown "$itgmachine_user:$itgmachine_user" "$itgmachine_home/.itgmania/Save" \
                 || return 1
     fi
 
     screen_ensure_command crudini screen_crudini || return 1
 
-    local prefs="$itgmania_home/.itgmania/Save/Preferences.ini"
+    local prefs="$itgmachine_home/.itgmania/Save/Preferences.ini"
     run crudini --ini-options=nospace --set "$prefs" "$1" "$2" "$3"
 }
 
@@ -531,7 +577,7 @@ players when not in use?"; then
 }
 
 screen_simplylove_gsapi() {
-    local slgs="/usr/local/games/itgmania/Themes/Simply Love/Scripts/SL-Helpers-GrooveStats.lua"
+    local slgs="$itgmachine_install/itgmania/Themes/Simply Love/Scripts/SL-Helpers-GrooveStats.lua"
     sed -i "s|.*local url_prefix = .*|        local url_prefix = \"$1\"|" "$slgs"
 }
 
@@ -591,8 +637,8 @@ EOF
 screen_pacdrive() {
     screen_itgmania_user || return 1
 
-    [[ "$(getent group input)" == *"$itgmania_user"* ]] \
-        || run adduser "$itgmania_user" input \
+    [[ "$(getent group input)" == *"$itgmachine_user"* ]] \
+        || run adduser "$itgmachine_user" input \
         || return 1
 
     cat << EOF > /etc/udev/rules.d/75-linux-pacdrive.rules \
@@ -683,7 +729,7 @@ screen_itgmania() {
     menubox \
         screen_itgmania_user "Select ITGmania user" \
         screen_itgmania_dependencies "Install ITGmania runtime dependencies" \
-        screen_itgmania_download "Download ITGmania for Linux" \
+        screen_itgmania_install "Install ITGmania" \
         screen_itgmania_sddm "Configure SDDM to run ITGMania" \
         screen_itgmania_configure "Configure ITGmania" \
         screen_itgmania_inputdevices "Configure input device order" \
@@ -718,5 +764,8 @@ if ! command -v whiptail &> /dev/null; then
     exit 58
 fi
 
-screen_ensure_root
-screen_main
+# Only run main flow when executed directly, not when sourced
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    screen_ensure_root
+    screen_main
+fi
