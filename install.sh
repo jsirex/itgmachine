@@ -650,6 +650,20 @@ EOF
     screen_itgmania_prefs "Options" "LightsDriver" "LinuxPacDrive"
 }
 
+screen_machine_shutdown() {
+    if yesnobox "Perform shutdown when user switch on tty6 (CTRL+ALT+F6)?"; then
+        run mkdir -p /etc/systemd/system/getty@tty6.service.d \
+            && cat << EOF > /etc/systemd/system/getty@tty6.service.d/override.conf \
+            && run systemctl daemon-reload
+[Service]
+ExecStart=
+ExecStart=/usr/bin/systemctl poweroff
+EOF
+    else
+        run rm -rf /etc/systemd/system/getty@tty6.service.d \
+            && systemctl daemon-reload
+    fi
+}
 
 # # For usb profiles required
 # screen_fstab_validate() {
@@ -742,7 +756,8 @@ screen_tweaks() {
     menubox \
         screen_udev_ghettio "Fix ghettio endless reset under Linux" \
         screen_pacdrive "Configure Linux PacDrive" \
-        screen_itgmania_usbprofiles "Configure USB Profiles (TODO)"
+        screen_itgmania_usbprofiles "Configure USB Profiles (TODO)" \
+        screen_machine_shutdown "Setup machine shutdown"
 }
 
 screen_main() {
